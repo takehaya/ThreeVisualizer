@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import OrbitControls from 'orbit-controls-es6';
 
-const _NODECOUNT = 12;
+const _NODECOUNT = 24;
 const _NODES = {};
 
 class MainNirvana {
@@ -14,7 +14,44 @@ class MainNirvana {
       _NODES[i] = node;
       _Visualizer.addNode(node);
     }
+    const loop = () => {
+      requestAnimationFrame(loop);
 
+       _Visualizer.renderpacket();
+       if (Math.random() > 0.8) {
+           const f = Math.floor(Math.random() * _NODECOUNT);
+           const height = _NODES[f].getHeight();
+           const src = (new THREE.Vector3(0, height, 0)).add(_NODES[f].getObject().position);
+           const dest = _Visualizer.getServer().getObject().position;
+           const dir = new THREE.Vector3(0, 1, 0);
+           const curve = new PacketFlameCurve(src, dest, dir, 500);
+           const b = new CurvePacketTransport(curve, 200);
+           _Visualizer.addPacketTransport(b);
+       }
+      //_Visualizer.render();
+    };
+    loop();
+    // const loop = ()=>{
+    //   const p = _Visualizer.getpackets();
+    //   for (let b of p) {
+    //        if (b != null && !b.isDead) {
+    //            b.frame();
+    //        }
+    //    }
+    //    if (Math.random() > 0.8) {
+    //        const f = Math.floor(Math.random() * _NODECOUNT);
+    //        const height = _NODES[f].getHeight();
+    //        const src = (new THREE.Vector3(0, height, 0)).add(_NODES[f].getObject().position);
+    //        const dest = _Visualizer.getServer().getObject().position;
+    //        const dir = new THREE.Vector3(0, 1, 0);
+    //        const curve = new PacketFlameCurve(src, dest, dir, 500);
+    //        const b = new CurvePacketTransport(curve, 200);
+    //        _Visualizer.addPacketTransport(b);
+    //    }
+    //    _Visualizer.render();
+    //    setTimeout(loop,100);
+    // };
+    // loop();
   }
 }
 
@@ -25,7 +62,7 @@ class Visualizer {
     this.output = opts.output || document.createElement('div');
 
     this.nodes = []; //デバイス
-    this.bullets = [];//パケット
+    this.packets = [];//パケット
 
     this.FieldInit();
 
@@ -68,7 +105,7 @@ class Visualizer {
        );
       //const orthocamera = new THREE.OrthographicCamera( this.width / -2, this.width / 2, this.height / 2, this.height / -2, 1, 10000 );
       this.camera = perscamera;
-      this.camera.position.set( 1000,  1000, 1000 );
+      this.camera.position.set( 600,  600, 600 );
       this.camera.lookAt( this.scene.position );
 
        // helper
@@ -88,13 +125,13 @@ class Visualizer {
   makeObject(){
     this.orbit = new THREE.Object3D();
     this.scene.add(this.orbit);
-    this.orbitRadius = 1000;
+    this.orbitRadius = 500;
 
     this.server = new Server();
   }
 
-  addNode(e){
-    this.nodes.push(e);
+  addNode(object){
+    this.nodes.push(object);
     this.reconstructOrbit();
   }
 
@@ -113,15 +150,36 @@ class Visualizer {
       const obj = this.nodes[i].getObject();
       obj.position.x = this.orbitRadius * Math.cos(rad*i);
       obj.position.z = this.orbitRadius * Math.sin(rad*i);
-      obj.rotation.y = -rad*i;
+      obj.rotation.y = -((Math.PI/180) * (360/N)*i + 90*(Math.PI/180));
       this.orbit.add(obj);
     }
   }
 
+  addPacketTransport(object){
+    this.refreshPacketTransport();
+    this.packets.push(object);
+    this.orbit.add(object.getObject());
+  }
+  refreshPacketTransport(){
+    this.packets.filter(
+      (item)=>item.isDispose).forEach((item)=>{
+        this.orbit.remove(item.getObject());
+      });
+  }
+
+  renderpacket(){
+
+    for (let b of this.packets) {
+         if (b != null && !b.isDead) {
+             b.frame();
+         }
+     }
+     this.render();
+  }
   render () {
-    requestAnimationFrame( () => {
-      this.render();
-    });
+    // requestAnimationFrame( () => {
+    //   this.render();
+    // });
     this.controls.update();
     this.renderer.render( this.scene, this.camera );
   }
@@ -135,17 +193,39 @@ class Visualizer {
   getServer(){
     return this.server;
   }
+
   getRenderer() {
     return this.renderer;
   }
+
   getScene(){
     return this.scene;
   }
+
   getCamera(){
     return this.camera;
   }
+
+  getpackets(){
+    return this.packets;
+  }
+  testingPacketTransport(){
+    const r = Math.floor(Math.random()*50);
+    if(r<12){
+      const elevation = this.nodes[i].getHeight();
+      const src = (new THREE.Vector3(0,height,0)).add(this.nodes[i].getObject().position);
+      const dest = this.server.getObject().postion;
+      const direction = new THREE.Vector3(0,1,0);
+      const curve = new PacketFlameCurve(src, dest, direction, 500);
+      const packetTransportObject = new CurvePacketTransport(curve,100);
+      this.addPacketTransport(packetTransportObject);
+    }
+  }
 }
 
+type MachineProps = {|
+  name:? string,
+|};
 class Machine {
     constructor(name) {
       this.machineName = name;
@@ -153,16 +233,22 @@ class Machine {
       this.score = 0;
       this.scoreScale = 0.5;
       const cylinderHeight = this.score * this.scoreScale;
-      const cylinderGeometry = new THREE.CylinderGeometry(
-        200,                         //radiusTop
-        200,                         //radiusBottom
-        cylinderHeight,              //height
-        6,                           //radiusSegments
-        1,                           //heightSegments
-        false,                       //openEnded
+      // const cylinderGeometry = new THREE.CylinderGeometry(
+      //   200,                         //radiusTop
+      //   200,                         //radiusBottom
+      //   cylinderHeight,              //height
+      //   6,                           //radiusSegments
+      //   1,                           //heightSegments
+      //   false,                       //openEnded
+      // );
+      const circleGeometry = new THREE.CircleGeometry(
+        75,
+        16,
+        90*(Math.PI/180),
+        90*(Math.PI/180),
       );
       this.cylinderMesh = new THREE.Mesh(
-        cylinderGeometry,
+        circleGeometry,
         new THREE.MeshBasicMaterial({
           color: 0x33eeff,
           transparent: true,
@@ -195,9 +281,13 @@ class Machine {
   }
     updateCylinder() {
         const height = this.getHeight();
-        const cylinderGeometry = new THREE.CylinderGeometry(100, 100, height, 6, 1, false);
+        //const cylinderGeometry = new THREE.CylinderGeometry(100, 100, height, 6, 1, false);
+        const circleGeometry = new THREE.CircleGeometry(
+          100,
+          8,
+        );
         this.cylinderMesh.geometry.dispose();
-        this.cylinderMesh.geometry = cylinderGeometry;
+        this.cylinderMesh.geometry = circleGeometry;
         this.cylinderMesh.position.y = height / 2;
         this.machineObject.remove(this.cylinderEdge);
         this.cylinderEdge = new THREE.EdgesHelper(this.cylinderMesh, 0x33ccff);
@@ -224,7 +314,7 @@ class Machine {
 class Server {
     constructor() {
         this.serverObject = new THREE.Object3D();
-        const box = new THREE.SphereGeometry(400, 400, 400);
+        const box = new THREE.SphereGeometry(200, 200, 200);
         const boxMesh = new THREE.Mesh(box, new THREE.MeshBasicMaterial({
             //color: 0xe03030,
             color: 0xef8e8f8,
@@ -242,12 +332,89 @@ class Server {
     }
 }
 
-class MachineFlame extends THREE.Curve{
+class CurvePacketTransport {
+  constructor(curve,frames) {
+    this.parent = new THREE.Object3D();
+    this.frames = frames;
+    this.framesNow = 0;
+    this.isDispose = false;
+    this.curve = curve;
+    this.curvePoint = this.curve.getPoints(this.frames);
+    const curvePacketTransportGeometry = new THREE.SphereGeometry(5,4,4);
+
+    this.packetTransport = new THREE.Mesh(
+      curvePacketTransportGeometry,
+      new THREE.MeshBasicMaterial({
+        color:0xFFEB3B,
+        transparent:true,
+        opacity:0.9,
+      })
+    );
+    this.line = new THREE.Line(null,
+      new THREE.LineBasicMaterial({
+        color:0xF57F17,
+        lineWidth:3,
+        transparent:true,
+        opacity:0.7,
+      })
+    );
+
+    this.parent.add(this.packetTransport);
+    this.parent.add(this.line);
+  }
+
+  frame(){
+    if(this.framesNow>this.frames){
+      this.dispose();
+      return;
+    }
+    const pos = this.curve.getPoint(this.framesNow/this.frames);
+    this.packetTransport.position.set(pos.x,pos.y,pos.z);
+
+    const geometry = new THREE.Geometry();
+    geometry.vertices = this.curvePoint.slice(Math.max(0, this.framesNow - this.frames/3),this.framesNow);
+      if (this.line.geometry) {
+        this.line.geometry.dispose();
+      }
+      this.line.geometry = geometry;
+      this.framesNow++;
+  }
+
+  getObject(){
+    return this.parent;
+  }
+  dispose(){
+    this.parent.remove(this.packetTransport);
+    this.parent.remove(this.line);
+    this.packetTransport.geometry.dispose();
+    this.packetTransport.material.dispose();
+    this.line.geometry.dispose();
+    this.line.material.dispose();
+  }
+}
+
+
+
+type PacketFlameCurveProps = {|
+  start: THREE.Vector3,
+  end: THREE.Vector3,
+  direction: THREE.Vector3,
+  elevation: number,
+|};
+class PacketFlameCurve extends THREE.Curve{
   constructor(start,end,direction,elevation) {
+    // const{
+    //   start,
+    //   end,
+    //   direction,
+    //   elevation,
+    // } = PacketFlameCurveProps;
     super();
     this.start = start;
     this.end = end;
-    this.direction = direction.nor;
+    this.direction = direction.normalize();//単位ベクトルを指定する
+    this.distance = this.end.distanceTo(this.start);
+    this.param = 4 * elevation/Math.pow(this.distance,2);
   }
   // select ot use points
   getPoint(t){
@@ -258,6 +425,7 @@ class MachineFlame extends THREE.Curve{
       return (new THREE.Vector3()).add(Va).add(Vb).add(this.start);
   }
 }
+
 
 
 

@@ -36,7 +36,7 @@
     "eslint-plugin-react": "^7.1.0",
     "flow": "^0.2.3",
     "flow-bin": "^0.53.1",
-    "flow-typed": "^2.1.2",
+    "flow-typed": "^2.1.5",
     "gulp": "^3.9.1",
     "gulp-babel": "^7.0.0",
     "gulp-rename": "^1.2.2",
