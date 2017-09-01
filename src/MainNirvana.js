@@ -4,6 +4,7 @@ import OrbitControls from 'orbit-controls-es6';
 
 const _NODECOUNT = 24;
 const _NODES = {};
+const _NODESPCAKETCOLOR = [["InOctets",0xd32f2f],["OutOctets",0x039BE5]];
 
 class MainNirvana {
   constructor(opts={}) {
@@ -342,10 +343,11 @@ class CurvePacketTransport {
     this.curvePoint = this.curve.getPoints(this.frames);
     const curvePacketTransportGeometry = new THREE.SphereGeometry(5,4,4);
 
+    const PacketColorSelect = Math.max(0,Math.floor(Math.random()*_NODESPCAKETCOLOR.length));
     this.packetTransport = new THREE.Mesh(
       curvePacketTransportGeometry,
       new THREE.MeshBasicMaterial({
-        color:0xFFEB3B,
+        color:_NODESPCAKETCOLOR[PacketColorSelect][1],
         transparent:true,
         opacity:0.9,
       })
